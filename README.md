@@ -1,12 +1,19 @@
 # C++20 Serialization Library
 
-A high-performance, type-safe serialization library for C++20 featuring compile-time reflection, concepts-based type constraints, and support for both JSON and binary formats.
+![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
+
+A high-performance, type-safe serialization library for C++20 featuring compile-time reflection, concepts-based type constraints, and support for JSON, Binary, and XML formats.
+
+Developed and maintained by [QuarismAnalytix](https://github.com/QuarismAnalytix).
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [Requirements](#requirements)
+- [Installation](#installation)
 - [Supported Types](#supported-types)
 - [Unsupported Types](#unsupported-types)
 - [Quick Start](#quick-start)
@@ -14,6 +21,9 @@ A high-performance, type-safe serialization library for C++20 featuring compile-
 - [Polymorphic Serialization](#polymorphic-serialization)
 - [Usage Examples](#usage-examples)
 - [API Reference](#api-reference)
+- [Contributing](#contributing)
+- [License](#license)
+- [Author](#author)
 
 ## Overview
 
@@ -45,9 +55,60 @@ The library is designed for high performance with features like cached type name
 
 - **C++20 or later** (requires concepts, std::format, std::source_location)
 - **Compiler**: GCC 11+, Clang 13+, MSVC 19.29+
+- **CMake**: 3.15 or later
 - **Dependencies**:
   - nlohmann/json (for JSON serialization)
+  - pugixml (for XML serialization)
   - Standard library with C++20 support
+
+## Installation
+
+### Using CMake
+
+1. Clone the repository:
+```bash
+git clone https://github.com/QuarismAnalytix/Serialization.git
+cd Serialization
+```
+
+2. Build the library:
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
+
+3. Run tests:
+```bash
+ctest
+# Or run individual tests
+./TestJsonSerialization
+./TestBinarySerialization
+./TestXmlSerialization
+```
+
+### Integration with Your Project
+
+#### Option 1: Add as subdirectory
+
+Add to your `CMakeLists.txt`:
+```cmake
+add_subdirectory(path/to/Serialization)
+target_link_libraries(your_target PRIVATE Serialization)
+```
+
+#### Option 2: Install and find package
+
+```bash
+# Install
+cd build
+cmake --install .
+
+# In your CMakeLists.txt
+find_package(XSigmaSerialization REQUIRED)
+target_link_libraries(your_target PRIVATE XSigmaSerialization::Serialization)
+```
 
 ## Supported Types
 
@@ -241,7 +302,7 @@ private:
     Person() = default;   // Required for deserialization
 
     // Add reflection metadata
-    ç Person, name_, age_);
+    SERIALIZATION_MACRO( Person, name_, age_);
 
     std::string name_;
     int age_;
@@ -258,31 +319,15 @@ save(archive, p);
 
 The following types are **NOT currently supported**:
 
-### std::optional
-
-**Status**: L Not supported
-**Reason**: No specialization exists for `std::optional`
-**Workaround**: Manually unwrap optional before serialization
-
-```cpp
-// L This will NOT compile
-std::optional<int> opt = 42;
-// save(archive, opt);  // Error: doesn't satisfy any concept
-
-//  Workaround
-if (opt.has_value()) {
-    save(archive, *opt);
-}
-```
 
 ### std::span
 
-**Status**: L Not supported
+**Status**: ❌ Not supported
 **Reason**: `std::span` is a non-owning view, serializing it would lose data
 **Workaround**: Convert to owning container or serialize underlying data
 
 ```cpp
-// L Not supported
+// ❌ Not supported
 std::vector<int> data{1, 2, 3, 4, 5};
 std::span<int> sp(data);
 // save(archive, sp);  // Error
@@ -293,12 +338,12 @@ save(archive, data);
 
 ### std::string_view
 
-**Status**: L Not recommended
+**Status**: ❌ Not recommended
 **Reason**: Non-owning view, underlying data may be deallocated
 **Workaround**: Convert to `std::string`
 
 ```cpp
-// L Dangerous
+// ❌ Dangerous
 std::string_view sv = "temporary";
 // The underlying data may be destroyed after serialization
 
@@ -309,12 +354,12 @@ save(archive, str);
 
 ### std::chrono Types
 
-**Status**: L Not supported
+**Status**: ❌ Not supported
 **Reason**: No specializations for time_point, duration, etc.
 **Workaround**: Convert to numeric representation
 
 ```cpp
-// L Not supported
+// ❌ Not supported
 auto now = std::chrono::system_clock::now();
 // save(archive, now);  // Error
 
@@ -325,12 +370,12 @@ save(archive, timestamp);
 
 ### Raw Pointers
 
-**Status**: L Not supported (by design)
+**Status**: ❌ Not supported (by design)
 **Reason**: Ownership semantics are unclear, potential memory safety issues
 **Workaround**: Use smart pointers
 
 ```cpp
-// L Not supported
+// ❌ Not supported
 int* raw_ptr = new int(42);
 // save(archive, raw_ptr);  // Error
 
@@ -1219,12 +1264,48 @@ Contributions are welcome! Please ensure:
 3. New features include tests
 4. Code follows existing style
 
+To contribute:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
 ## License
 
-[Specify your license here]
+MIT License
+
+Copyright (c) 2024 QuarismAnalytix
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+## Author
+
+**QuarismAnalytix**
+
+- GitHub: [@QuarismAnalytix](https://github.com/QuarismAnalytix)
+- Repository: [Serialization](https://github.com/QuarismAnalytix/Serialization)
 
 ## Acknowledgments
 
-- Built on nlohmann/json for JSON support
+- Built on [nlohmann/json](https://github.com/nlohmann/json) for JSON support
+- Uses [pugixml](https://pugixml.org/) for XML serialization
 - Uses C++20 concepts for type-safe serialization
 - Inspired by Boost.Serialization and Cereal
