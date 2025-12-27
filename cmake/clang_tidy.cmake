@@ -1,4 +1,4 @@
-# ============================================================================= XSigma Clang-Tidy
+# ============================================================================= Quarisma Clang-Tidy
 # Static Analysis Configuration Module
 # =============================================================================
 # This module configures clang-tidy for static code analysis and automated fixes. It enables code
@@ -22,7 +22,7 @@ if(NOT SERIALIZATION_ENABLE_CLANGTIDY)
   return()
 endif()
 
-# XSigma ClangTidy Configuration
+# Quarisma ClangTidy Configuration
 find_program(CLANG_TIDY_PATH NAMES clang-tidy DOC "Path to clang-tidy.")
 
 if(NOT CLANG_TIDY_PATH)
@@ -31,7 +31,7 @@ endif()
 set(CLANG_TIDY_FOUND ON CACHE BOOL "Found clang-tidy.")
 mark_as_advanced(CLANG_TIDY_FOUND)
 
-function(xsigma_target_clang_tidy target_name)
+function(quarisma_target_clang_tidy target_name)
   if(SERIALIZATION_ENABLE_FIX)
     message(WARNING "Applying clang-tidy fix to target: ${target_name}")
     set_target_properties(

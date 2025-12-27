@@ -1,10 +1,10 @@
-# ============================================================================= XSigma Build Speed
+# ============================================================================= Quarisma Build Speed
 # Optimization Configuration Module
 # =============================================================================
 # Enables configurable compiler caching (ccache, sccache, buildcache) and faster linkers for
 # improved build performance. Supports GCC, Clang, and MSVC on Linux, macOS, and Windows.
 #
-# NOTE: This module applies faster linker configuration ONLY to the xsigmabuild interface target,
+# NOTE: This module applies faster linker configuration ONLY to the quarismabuild interface target,
 # ensuring that third-party dependencies are not affected by linker choices.
 # =============================================================================
 

@@ -17,11 +17,11 @@ limitations under the License.
 
 #include <unordered_map>
 
-namespace xsigma
+namespace quarisma
 {
 
 // Simple alias for hash map - uses std::unordered_map
 template <typename Key, typename Value>
-using xsigma_map = std::unordered_map<Key, Value>;
+using quarisma_map = std::unordered_map<Key, Value>;
 
-}  // namespace xsigma
+}  // namespace quarisma

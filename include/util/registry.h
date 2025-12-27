@@ -60,7 +60,7 @@ public:
     Registry& operator=(const Registry& /*rhs*/) = delete;
 
 private:
-    xsigma::xsigma_map<KeyType, Function> registry_{};
+    quarisma::quarisma_map<KeyType, Function> registry_{};
     std::mutex                                register_mutex_;
 };
 
@@ -128,7 +128,7 @@ public:
     Registry& operator=(const Registry& /*rhs*/) = delete;
 
 private:
-    xsigma::xsigma_map<KeyType, Function> registry_{};
+    quarisma::quarisma_map<KeyType, Function> registry_{};
     std::mutex                                register_mutex_;
 };
 

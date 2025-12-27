@@ -20,7 +20,7 @@ limitations under the License.
 #include <sstream>
 #include <stdexcept>
 
-namespace xsigma
+namespace quarisma
 {
 
 // Helper to fold variadic arguments into stream
@@ -44,10 +44,10 @@ void stream_args(Stream& stream, Args&&... args)
         {                                                                           \
             std::ostringstream oss;                                                 \
             oss << "Check failed: " << #condition << " ";                           \
-            ::xsigma::detail::stream_args(oss, __VA_ARGS__);                        \
+            ::quarisma::detail::stream_args(oss, __VA_ARGS__);                        \
             throw std::runtime_error(oss.str());                                    \
         }                                                                           \
     } while (0)
 #endif
 
-}  // namespace xsigma
+}  // namespace quarisma

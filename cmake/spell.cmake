@@ -1,5 +1,5 @@
 # ============================================================================= 
-# XSigma Spell
+# Quarisma Spell
 # Checking Configuration Module
 # =============================================================================
 # This module configures codespell for automated spell checking and correction. WARNING: When

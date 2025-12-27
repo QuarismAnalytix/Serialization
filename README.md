@@ -106,8 +106,8 @@ cd build
 cmake --install .
 
 # In your CMakeLists.txt
-find_package(XSigmaSerialization REQUIRED)
-target_link_libraries(your_target PRIVATE XSigmaSerialization::Serialization)
+find_package(QuarismaSerialization REQUIRED)
+target_link_libraries(your_target PRIVATE QuarismaSerialization::Serialization)
 ```
 
 ## Supported Types

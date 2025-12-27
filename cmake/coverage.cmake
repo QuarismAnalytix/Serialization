@@ -1,4 +1,4 @@
-# ============================================================================= XSigma Code Coverage
+# ============================================================================= Quarisma Code Coverage
 # Configuration Module
 # =============================================================================
 # This module configures code coverage instrumentation and automated report generation. Supports
