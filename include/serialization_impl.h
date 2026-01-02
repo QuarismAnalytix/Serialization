@@ -171,14 +171,28 @@ inline constexpr std::string_view EMPTY_NAME = "null object!";
 // Forward declarations
 //-----------------------------------------------------------------------------
 template <typename Archiver, typename T>
-    requires BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
-             TupleLike<T> || VariantLike<T> || OptionalLike<T>
+    requires(BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
+             TupleLike<T> || VariantLike<T> || OptionalLike<T>)
 void save(Archiver& archive, const T& obj);
 
 template <typename Archiver, typename T>
-    requires BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
-             TupleLike<T> || VariantLike<T> || OptionalLike<T>
+    requires(BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
+             TupleLike<T> || VariantLike<T> || OptionalLike<T>)
 void load(Archiver& archive, T& obj);
+
+// Overloads for rvalue references (e.g., XML nodes returned by value)
+// Constrained to only match actual rvalues (not forwarding references)
+template <typename Archiver, typename T>
+    requires(!std::is_lvalue_reference_v<Archiver>) &&
+            (BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
+             TupleLike<T> || VariantLike<T> || OptionalLike<T>)
+void save(Archiver&& archive, const T& obj);
+
+template <typename Archiver, typename T>
+    requires(!std::is_lvalue_reference_v<Archiver>) &&
+            (BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
+             TupleLike<T> || VariantLike<T> || OptionalLike<T>)
+void load(Archiver&& archive, T& obj);
 
 //-----------------------------------------------------------------------------
 // Registry registration helper with const-correctness
@@ -389,13 +403,13 @@ struct serializer_impl
                 {
                     constexpr auto property =
                         std::get<I>(serialization::access::serializer::tuple<T>());
-                    const auto& name        = property.name();
-                    auto&       archive_tmp = archiver_wrapper<Archiver>::get(archive, name);
+                    const auto& name = property.name();
 
                     if constexpr (!is_reflection_empty_v<std::decay_t<decltype(property)>>)
                     {
                         const auto& member_ref = obj->*(property.member());
-                        serialization::save(archive_tmp, member_ref);
+                        serialization::save(archiver_wrapper<Archiver>::get(archive, name),
+                                            member_ref);
                     }
                 });
         }
@@ -426,15 +440,15 @@ struct serializer_impl
                     {
                         constexpr auto property =
                             std::get<I>(serialization::access::serializer::tuple<T>());
-                        const auto& name        = property.name();
-                        auto&       archive_tmp = archiver_wrapper<Archiver>::get(archive, name);
+                        const auto& name = property.name();
 
                         if constexpr (!is_reflection_empty_v<std::decay_t<decltype(property)>>)
                         {
                             using member_type =
                                 typename std::decay_t<decltype(property)>::member_type;
                             auto& member_ref = obj.*(property.member());
-                            serialization::load<Archiver, member_type>(archive_tmp, member_ref);
+                            serialization::load<Archiver, member_type>(
+                                archiver_wrapper<Archiver>::get(archive, name), member_ref);
                         }
                     });
 
@@ -596,40 +610,46 @@ struct serializer_impl<Archiver, std::variant<Types...>>
             num_types - 1);
 
         using variant_type = std::variant<Types...>;
-        using loader_type  = void (*)(Archiver& archive, variant_type& variant);
 
-        static constexpr loader_type loaders[] = {
-            [](Archiver& archive, variant_type& variant)
+        // Helper to load a specific variant alternative
+        auto load_alternative = [&archive, &variant]<typename AltType>()
+        {
+            if constexpr (std::is_default_constructible_v<AltType>)
             {
-                if constexpr (std::is_default_constructible_v<Types>)
+                if (!std::holds_alternative<AltType>(variant))
                 {
-                    if (!std::holds_alternative<Types>(variant))
-                    {
-                        variant = Types{};
-                    }
-                    serialization::load(archive, std::get<Types>(variant));
+                    variant = AltType{};
                 }
-                else
-                {
-                    alignas(Types) unsigned char storage[sizeof(Types)];
-                    auto*                        ptr =
-                        access::serializer::placement_new<Types>(reinterpret_cast<void*>(storage));
+                serialization::load(archiver_wrapper<Archiver>::get(archive, VALUE_NAME),
+                                    std::get<AltType>(variant));
+            }
+            else
+            {
+                alignas(AltType) unsigned char storage[sizeof(AltType)];
+                auto*                          ptr =
+                    access::serializer::placement_new<AltType>(reinterpret_cast<void*>(storage));
 
-                    try
-                    {
-                        serialization::load(archive, *ptr);
-                        variant = std::move(*ptr);
-                    }
-                    catch (...)
-                    {
-                        access::serializer::destruct(*ptr);
-                        throw;
-                    }
+                try
+                {
+                    serialization::load(archiver_wrapper<Archiver>::get(archive, VALUE_NAME), *ptr);
+                    variant = std::move(*ptr);
+                }
+                catch (...)
+                {
                     access::serializer::destruct(*ptr);
+                    throw;
                 }
-            }...};
+                access::serializer::destruct(*ptr);
+            }
+        };
 
-        loaders[index](archiver_wrapper<Archiver>::get(archive, VALUE_NAME), variant);
+        // Dispatch to the correct loader based on index
+        using loader_type = void (*)(decltype(load_alternative)&, variant_type&);
+        static constexpr loader_type loaders[] = {
+            [](decltype(load_alternative)& loader, [[maybe_unused]] variant_type& v)
+            { loader.template operator()<Types>(); }...};
+
+        loaders[index](load_alternative, variant);
     }
 };
 
@@ -860,18 +880,40 @@ struct serializer_impl<Archiver, T>
 //-----------------------------------------------------------------------------
 // Public API with concepts
 //-----------------------------------------------------------------------------
+
+// Lvalue reference overloads (for JSON, Binary, etc.)
 template <typename Archiver, typename T>
-    requires BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
-             TupleLike<T> || VariantLike<T> || OptionalLike<T>
+    requires(BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
+             TupleLike<T> || VariantLike<T> || OptionalLike<T>)
 void save(Archiver& archive, const T& obj)
 {
     impl::serializer_impl<Archiver, T>::save(archive, obj);
 }
 
 template <typename Archiver, typename T>
-    requires BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
-             TupleLike<T> || VariantLike<T> || OptionalLike<T>
+    requires(BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
+             TupleLike<T> || VariantLike<T> || OptionalLike<T>)
 void load(Archiver& archive, T& obj)
+{
+    impl::serializer_impl<Archiver, T>::load(archive, obj);
+}
+
+// Rvalue reference overloads (for XML nodes returned by value)
+// Constrained to only match actual rvalues (not forwarding references)
+template <typename Archiver, typename T>
+    requires(!std::is_lvalue_reference_v<Archiver>) &&
+            (BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
+             TupleLike<T> || VariantLike<T> || OptionalLike<T>)
+void save(Archiver&& archive, const T& obj)
+{
+    impl::serializer_impl<Archiver, T>::save(archive, obj);
+}
+
+template <typename Archiver, typename T>
+    requires(!std::is_lvalue_reference_v<Archiver>) &&
+            (BaseSerializable<T> || Container<T> || Reflectable<T> || SmartPointer<T> ||
+             TupleLike<T> || VariantLike<T> || OptionalLike<T>)
+void load(Archiver&& archive, T& obj)
 {
     impl::serializer_impl<Archiver, T>::load(archive, obj);
 }

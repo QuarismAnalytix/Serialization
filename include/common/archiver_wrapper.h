@@ -519,55 +519,49 @@ struct archiver_wrapper<pugi::xml_node>
         return archive.attribute(std::string(index_name).c_str()).as_uint();
     }
 
-private:
-    /// @brief Thread-local cache for XML nodes to enable reference returns
-    thread_local static inline xml_node_wrapper cached_node;
-
 public:
     /// @brief Get XML child node by string key (const)
     /// @param archive The XML node to read from
     /// @param idx The child element name to access
-    /// @return Reference to cached XML child node
-    [[nodiscard]] static const pugi::xml_node& get(const pugi::xml_node& archive, std::string_view idx)
+    /// @return The XML child node (by value to avoid aliasing issues with nested calls)
+    [[nodiscard]] static pugi::xml_node get(const pugi::xml_node& archive, std::string_view idx)
     {
-        cached_node.node = archive.child(std::string(idx).c_str());
-        return cached_node.node;
+        return archive.child(std::string(idx).c_str());
     }
 
     /// @brief Get XML child node by numeric index (const)
     /// @param archive The XML node to read from
     /// @param idx The index to access
-    /// @return Reference to cached XML child node
-    [[nodiscard]] static const pugi::xml_node& get(const pugi::xml_node& archive, size_t idx)
+    /// @return The XML child node (by value to avoid aliasing issues with nested calls)
+    [[nodiscard]] static pugi::xml_node get(const pugi::xml_node& archive, size_t idx)
     {
         auto child = archive.first_child();
         for (size_t i = 0; i < idx && child; ++i)
         {
             child = child.next_sibling();
         }
-        cached_node.node = child;
-        return cached_node.node;
+        return child;
     }
 
     /// @brief Get XML child node by string key (mutable)
     /// @param archive The XML node to modify
     /// @param idx The child element name to access
-    /// @return Reference to cached XML child node
-    static pugi::xml_node& get(pugi::xml_node& archive, std::string_view idx)
+    /// @return The XML child node (by value to avoid aliasing issues with nested calls)
+    static pugi::xml_node get(pugi::xml_node& archive, std::string_view idx)
     {
-        cached_node.node = archive.child(std::string(idx).c_str());
-        if (!cached_node.node)
+        auto child = archive.child(std::string(idx).c_str());
+        if (!child)
         {
-            cached_node.node = archive.append_child(std::string(idx).c_str());
+            child = archive.append_child(std::string(idx).c_str());
         }
-        return cached_node.node;
+        return child;
     }
 
     /// @brief Get XML child node by numeric index (mutable)
     /// @param archive The XML node to modify
     /// @param idx The index to access
-    /// @return Reference to cached XML child node
-    static pugi::xml_node& get(pugi::xml_node& archive, size_t idx)
+    /// @return The XML child node (by value to avoid aliasing issues with nested calls)
+    static pugi::xml_node get(pugi::xml_node& archive, size_t idx)
     {
         auto child = archive.first_child();
         for (size_t i = 0; i < idx; ++i)
@@ -585,8 +579,7 @@ public:
         {
             child = archive.append_child("item");
         }
-        cached_node.node = child;
-        return cached_node.node;
+        return child;
     }
 
     /// @brief Resize XML container (prepare for array serialization)
